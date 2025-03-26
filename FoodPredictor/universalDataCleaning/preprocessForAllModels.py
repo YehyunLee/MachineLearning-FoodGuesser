@@ -125,7 +125,6 @@ def preprocess(file_path, output_path):
     print(f"Cleaned data saved to {output_path}")
 
 
-
-preprocess("../data/raw/cleaned_data_combined.csv", "cleaned_data_universal.csv")
-preprocess("../data/raw/cleaned_data_combined_modified.csv", "cleaned_data_modified_universal.csv")
-preprocess("../data/cleaned/manual_cleaned_data.csv", "manual_cleaned_data_universal.csv")
+# preprocess("../data/raw/cleaned_data_combined.csv", "../data/cleaned_with_script/cleaned_data_universal.csv")
+# preprocess("../data/raw/cleaned_data_combined_modified.csv", "../data/cleaned_with_script/cleaned_data_modified_universal.csv")
+# preprocess("../data/manual_cleaned/manual_cleaned_data.csv", "../data/cleaned_with_script/manual_cleaned_data_universal.csv")
