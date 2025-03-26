@@ -9,8 +9,8 @@ import os
 
 torch.manual_seed(42)
 
-DATASET_PATH = 'FoodPredictor/data/cleaned/manual_cleaned_data.csv'
-LOG_DIR = 'FoodPredictor/mlp/experiment_logs'
+DATASET_PATH = '../data/cleanedWithScript/manual_cleaned_data_universal.csv'
+LOG_DIR = '../mlp/experiment_logs'
 NUM_EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
