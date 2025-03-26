@@ -7,25 +7,25 @@ from datetime import datetime
 import json
 import os
 
-torch.manual_seed(42)
+torch.manual_seed(42)  # for reproducibility
 
 DATASET_PATH = '../data/cleanedWithScript/manual_cleaned_data_universal.csv'
 LOG_DIR = '../mlp/experiment_logs'
 NUM_EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
-WEIGHT_DECAY = 1e-3
+WEIGHT_DECAY = 5e-3
 
 model = nn.Sequential(
     nn.Linear(19, 128),
     nn.ReLU(),
-    nn.Dropout(0.2),
+    nn.Dropout(0.1),
     nn.Linear(128, 64),
     nn.ReLU(),
-    nn.Dropout(0.2),
+    nn.Dropout(0.1),
     nn.Linear(64, 32),
     nn.ReLU(),
-    nn.Dropout(0.2),
+    nn.Dropout(0.1),
     nn.Linear(32, 3)  # nn.CrossEntropyLoss applies softmax internally during loss calculation
 )
 
