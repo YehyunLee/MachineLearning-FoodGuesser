@@ -19,20 +19,31 @@ def convert_date_format(value):
 def clean_ingredient_count(value):
     if isinstance(value, str):
         value = value.lower().strip()
-        value = re.sub(r'[^\d\-]', '', value)  # Remove non-numeric characters except dashes
-        if '-' in value:
+        value = re.sub(r'[^0-9.\-]', '', value)  # Keep only digits, dots, and dashes
+
+        if '-' in value:  # Handle range format like "3.5-5"
             parts = value.split('-')
-            if all(p.isdigit() for p in parts):
-                return f"{parts[0]}-{parts[1]}"  # Keep range format
-        elif value.isdigit():
-            return value
+            if len(parts) == 2 and all(p.replace('.', '', 1).isdigit() for p in parts):  # Ensure both parts are valid numbers
+                p1, p2 = float(parts[0]), float(parts[1])
+                mean_val = (p1 + p2) / 2
+                return f"{mean_val:.1f}"
+        elif value.replace('.', '', 1).isdigit():  # Allow single float or integer values
+            return f"{float(value):.1f}"  # Convert "5.00" → "5.0"
+
     return "N/A"
 
 # Function to clean price (Q4)
 def clean_price(value):
     if isinstance(value, str):
-        value = re.sub(r'[^\d\-]', '', value)  # Remove all non-numeric characters except dash
-        return value if value else "N/A"
+        value = re.sub(r'[^0-9.\-]', '', value)  # modified: allow dash for range check
+        if '-' in value:  # modified to handle range format like "3.00-5.50"
+            parts = value.split('-')
+            if len(parts) == 2 and all(p.replace('.', '', 1).isdigit() for p in parts):
+                p1, p2 = float(parts[0]), float(parts[1])
+                mean_val = (p1 + p2) / 2
+                return f"{mean_val:.1f}"
+        elif value.replace('.', '', 1).isdigit():
+            return f"{float(value):.1f}"
     return "N/A"
 
 # Function to clean movie titles (Q5)
@@ -106,8 +117,11 @@ def preprocess(file_path, output_path):
     # Rename to standard raw format
     final_df = df.rename(columns=col_map)[["id"] + list(col_map.values())]
 
+    # convert all columns to string
+    final_df = final_df.astype(str)
+
     # Save cleaned file
-    final_df.to_csv(output_path, index=False)
+    final_df.to_csv(output_path, index=False, quoting=1) # quoting=1 to avoid double quotes around strings
     print(f"Cleaned data saved to {output_path}")
 
 
