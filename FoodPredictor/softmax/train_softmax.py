@@ -15,6 +15,7 @@ NUM_EPOCHS = 100
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
+N_BAGS = 5  # number of bootstrap models
 
 # Define the Softmax Regression model
 class SoftmaxRegression(nn.Module):
@@ -110,6 +111,25 @@ def train(train_loader, val_loader, model, loss_fn, optimizer):
 
     log_experiment(train_loss_history, val_loss_history, accuracy_history, model)
 
+def ensemble_predict(models, dataloader, output_dim):
+    all_preds = []
+    all_targets = []
+    with torch.no_grad():
+        for x, y in dataloader:
+            preds_sum = torch.zeros(x.size(0), output_dim)
+            for m in models:
+                preds_sum += m(x)
+            avg_preds = preds_sum / len(models)
+            all_preds.append(avg_preds)
+            all_targets.append(y)
+    all_preds = torch.cat(all_preds)
+    all_targets = torch.cat(all_targets)
+    predicted_classes = torch.argmax(all_preds, dim=1)
+    target_classes = torch.argmax(all_targets, dim=1)
+    correct = torch.sum(predicted_classes == target_classes).item()
+    accuracy = correct / all_preds.size(0) * 100
+    return accuracy
+
 if __name__ == '__main__':
     # For Softmax training, use bag-of-words from Q5 and Q6 (and Label)
     df = preprocess(DATASET_PATH, normalize_and_onehot=True, mode="softmax")
@@ -141,10 +161,25 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, drop_last=True)
 
-    # Initialize model, loss function, and optimizer
-    model = SoftmaxRegression(input_dim, output_dim)
+    # Initialize loss function
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-
-    # Train the model
-    train(train_loader, val_loader, model, loss_fn, optimizer)
+    
+    # Bagging: train ensemble of models using bootstrapped samples
+    ensemble_models = []
+    for bag in range(N_BAGS):
+        print(f"Training bag {bag+1}/{N_BAGS}")
+        # Create bootstrap sample indices
+        indices = torch.randint(0, len(train_dataset), (len(train_dataset),))
+        bootstrap_subset = torch.utils.data.Subset(train_dataset, indices.tolist())
+        bootstrap_loader = DataLoader(bootstrap_subset, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
+        model = SoftmaxRegression(input_dim, output_dim)
+        optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        for epoch in range(NUM_EPOCHS):
+            train_loss = train_loop(bootstrap_loader, model, loss_fn, optimizer)
+            if epoch % 10 == 0:
+                print(f"Bag {bag+1} Epoch {epoch}: Loss {train_loss:.4f}")
+        ensemble_models.append(model)
+    
+    # Evaluate ensemble on validation data
+    ensemble_accuracy = ensemble_predict(ensemble_models, val_loader, output_dim)
+    print(f"Ensemble validation accuracy: {ensemble_accuracy:.2f}%")
