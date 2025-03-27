@@ -93,6 +93,29 @@ def log_experiment(train_loss_history, val_loss_history, accuracy_history, model
     plt.legend()
     plt.savefig(f'{dir_path}/loss.png')
 
+def log_ensemble_experiment(ensemble_accuracy, ensemble_models):
+    # Create a timestamped directory for ensemble logs
+    dir_path = f'{LOG_DIR}/{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}_ensemble'
+    os.makedirs(dir_path, exist_ok=True)
+    
+    with open(f'{dir_path}/ensemble_accuracy.txt', 'w') as file:
+        file.write(str(ensemble_accuracy))
+    
+    with open(f'{dir_path}/model_architecture.txt', 'w') as file:
+        # Log each model's architecture
+        file.write("\n".join([str(model) for model in ensemble_models]))
+    
+    hyperparameters = {
+        'NUM_EPOCHS': NUM_EPOCHS,
+        'BATCH_SIZE': BATCH_SIZE,
+        'LEARNING_RATE': LEARNING_RATE,
+        'WEIGHT_DECAY': WEIGHT_DECAY,
+        'N_BAGS': N_BAGS
+    }
+    with open(f'{dir_path}/hyperparameters.json', 'w') as file:
+        json.dump(hyperparameters, file, indent=4)
+ 
+
 # Main training function
 def train(train_loader, val_loader, model, loss_fn, optimizer):
     train_loss_history = []
@@ -183,3 +206,6 @@ if __name__ == '__main__':
     # Evaluate ensemble on validation data
     ensemble_accuracy = ensemble_predict(ensemble_models, val_loader, output_dim)
     print(f"Ensemble validation accuracy: {ensemble_accuracy:.2f}%")
+    
+    # Log the ensemble experiment similar to mlp train.py logs
+    log_ensemble_experiment(ensemble_accuracy, ensemble_models)
