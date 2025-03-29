@@ -1,11 +1,14 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
-from preprocess import preprocess
+import sys
 from datetime import datetime
 import os
 import json
 import matplotlib.pyplot as plt
+
+sys.path.append('../utils')
+from preprocess import preprocess
 
 torch.manual_seed(42)  # for reproducibility
 
