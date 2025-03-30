@@ -175,5 +175,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-FoodPredictor/mlp/experiment_logs/*
+FoodPredictor/fullMLP/experiment_logs/*
+FoodPredictor/limitMLP/experiment_logs/*
+FoodPredictor/naive_bayes/experiment_logs/*
 FoodPredictor/softmax/experiment_logs/*
