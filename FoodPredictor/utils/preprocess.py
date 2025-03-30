@@ -35,6 +35,8 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full"):
                             columns=vectorizer_q5.get_feature_names_out())
     bow_q6 = pd.DataFrame(vectorizer_q6.fit_transform(df["Q6 Cleaned"]).toarray(), 
                             columns=vectorizer_q6.get_feature_names_out())
+    print(f"Shape of bow_q5: {bow_q5.shape}")
+    print(f"Shape of bow_q6: {bow_q6.shape}")
 
     if mode == "full":
         # Process numerical features
@@ -46,6 +48,7 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full"):
 
         scaler = MinMaxScaler()
         normalized_numerical = pd.DataFrame(scaler.fit_transform(df[numerical_cols]), columns=numerical_cols)
+        print(f"Shape of normalized numerical features: {normalized_numerical.shape}")
 
         # One-hot encode all categorical features (including Label)
         categorical_cols = ["Q3: In what setting would you expect this food to be served? Please check all that apply",
@@ -54,6 +57,8 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full"):
         encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
         encoded_categorical = pd.DataFrame(encoder.fit_transform(df[categorical_cols]),
                                            columns=encoder.get_feature_names_out(categorical_cols))
+        print(f"Shape of encoded categorical features: {encoded_categorical.shape}")
+        
         final_df = pd.concat([df["id"], normalized_numerical, bow_q5, bow_q6, encoded_categorical], axis=1)
     elif mode == "softmax":
         # One-hot encode only the Label column
