@@ -3,15 +3,15 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 
 
-def process_intervals(x: str):
-    if x.isdigit():
-        return x
-    interval = x.split('-')
-    return interval[0]
+# def process_intervals(x: str):
+#     if x.isdigit():
+#         return x
+#     interval = x.split('-')
+#     return interval[0]
 
 
-def min_max_scaling(series: pd.Series):
-    return (series - series.min()) / (series.max() - series.min())
+# def min_max_scaling(series: pd.Series):
+#     return (series - series.min()) / (series.max() - series.min())
     
 
 def preprocess(file_path, normalize_and_onehot=False, mode="full"):
