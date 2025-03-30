@@ -17,10 +17,15 @@ from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 def preprocess(file_path, normalize_and_onehot=False, mode="full"):
     # Load data
     df = pd.read_csv(file_path, dtype=str)
-
+    
+    # Record initial row count before dropping missing values
+    initial_rows = len(df)
+    
     # Drop rows with invalid values (N/A)
     df.replace("N/A", pd.NA, inplace=True)
     df.dropna(inplace=True)
+    dropped_rows = initial_rows - len(df)
+    print(f"Dropped {dropped_rows} rows out of {initial_rows} due to missing values.")
     
     # Bag-of-Words for Q5 and Q6
     vectorizer_q5 = CountVectorizer(max_features=100)  # Limit to top 100 features
