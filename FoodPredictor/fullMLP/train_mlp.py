@@ -13,7 +13,7 @@ from preprocess import preprocess
 torch.manual_seed(42)  # for reproducibility
 
 DATASET_PATH = '../data/cleanedWithScript/manual_cleaned_data_universal.csv'
-LOG_DIR = '../mlp/experiment_logs'
+LOG_DIR = '../fullMLP/experiment_logs'
 NUM_EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
@@ -113,6 +113,20 @@ def log_experiment(train_loss_history, val_loss_history, accuracy_history, model
     plt.savefig(f'{dir_path}/loss.png')
 
 
+def evaluate_test_set(test_loader, model):
+    model.eval()
+    num_correct = 0
+    num_samples = 0
+    with torch.no_grad():
+        for x, y in test_loader:
+            pred = model(x)
+            num_correct += torch.sum(torch.argmax(pred, axis=1) == torch.argmax(y, axis=1))
+            num_samples += x.size(0)
+    test_accuracy = num_correct.item() / num_samples * 100
+    print(f'Final Test Accuracy: {test_accuracy}%')
+    return test_accuracy
+
+
 if __name__ == '__main__':
     # Use "full" mode to get all features
     df = preprocess(DATASET_PATH, mode="full")
@@ -154,3 +168,6 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 
     train(train_loader, val_loader, model, loss_fn, optimizer)
+
+    # Evaluate on the test set
+    evaluate_test_set(test_loader, model)

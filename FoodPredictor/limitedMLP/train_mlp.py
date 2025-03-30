@@ -2,22 +2,32 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, random_split
 import matplotlib.pyplot as plt
+from preprocess import preprocess
 from datetime import datetime
 import json
 import os
-import sys
-
-sys.path.append('../utils')
-from preprocess import preprocess
 
 torch.manual_seed(42)  # for reproducibility
 
 DATASET_PATH = '../data/cleanedWithScript/manual_cleaned_data_universal.csv'
-LOG_DIR = '../mlp/experiment_logs'
+LOG_DIR = '../limitedMLP/experiment_logs'
 NUM_EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 WEIGHT_DECAY = 5e-3
+
+model = nn.Sequential(
+    nn.Linear(19, 128),
+    nn.ReLU(),
+    nn.Dropout(0.1),
+    nn.Linear(128, 64),
+    nn.ReLU(),
+    nn.Dropout(0.1),
+    nn.Linear(64, 32),
+    nn.ReLU(),
+    nn.Dropout(0.1),
+    nn.Linear(32, 3)  # nn.CrossEntropyLoss applies softmax internally during loss calculation
+)
 
 
 def train_loop(train_loader, model, loss_fn, optimizer):
@@ -37,10 +47,6 @@ def train_loop(train_loader, model, loss_fn, optimizer):
 
     
 def train(train_loader, val_loader, model, loss_fn, optimizer):
-    patience = 20  # Number of epochs without improvement before stopping
-    best_val_loss = float('inf')
-    epochs_without_improvement = 0
-
     train_loss_history = []
     val_loss_history = []
     accuracy_history = []
@@ -60,22 +66,10 @@ def train(train_loader, val_loader, model, loss_fn, optimizer):
 
                 num_correct += torch.sum(torch.argmax(pred, axis=1) == torch.argmax(y, axis=1))
                 num_samples += x.size(0)
-        current_val_loss = val_running_loss / len(val_loader)
-        val_loss_history.append(current_val_loss)
-        accuracy = num_correct.item() / num_samples * 100
-        accuracy_history.append(accuracy)
-        print(f'Epoch: [{epoch + 1}/{NUM_EPOCHS}], Train Loss: {train_loss}, Val Loss: {current_val_loss}, Accuracy: {accuracy}%')
 
-        # Early stopping check
-        if current_val_loss < best_val_loss:
-            best_val_loss = current_val_loss
-            epochs_without_improvement = 0
-        else:
-            epochs_without_improvement += 1
-        
-        if epochs_without_improvement >= patience:
-            print("Early stopping triggered.")
-            break
+        val_loss_history.append(val_running_loss / len(val_loader))
+        accuracy_history.append(num_correct.item() / num_samples * 100)
+        print(f'Epoch: [{epoch + 1}/{NUM_EPOCHS}], train_loss: {train_loss}, val_loss: {val_running_loss / len(val_loader)}, accuracy: {num_correct.item() / num_samples * 100}%')
 
     log_experiment(train_loss_history, val_loss_history, accuracy_history, model)
 
@@ -114,32 +108,13 @@ def log_experiment(train_loss_history, val_loss_history, accuracy_history, model
 
 
 if __name__ == '__main__':
-    # Use "full" mode to get all features
-    df = preprocess(DATASET_PATH, mode="full")
-    
-    # Use slicing: first column is "id" and the last columns are labels
-    output_dim = len([col for col in df.columns if col.startswith("Label_")])
-    input_dim = df.shape[1] - output_dim - 1  # Exclude "id" and label columns
-    
+    df = preprocess(DATASET_PATH)
+
     dataset = TensorDataset(
-        torch.tensor(df.iloc[:, 1:-output_dim].to_numpy(), dtype=torch.float32),  # features: exclude "id" and label columns
-        torch.tensor(df.iloc[:, -output_dim:].to_numpy(), dtype=torch.float32)      # labels: last output_dim columns
+        torch.tensor(df.iloc[:,:-3].to_numpy(), dtype=torch.float32),
+        torch.tensor(df.iloc[:,-3:].to_numpy(), dtype=torch.float32)
     )
-    
-    # Instantiate model with dynamic dimensions
-    model = nn.Sequential(
-        nn.Linear(input_dim, 128),
-        nn.ReLU(),
-        nn.Dropout(0.1),
-        nn.Linear(128, 64),
-        nn.ReLU(),
-        nn.Dropout(0.1),
-        nn.Linear(64, 32),
-        nn.ReLU(),
-        nn.Dropout(0.1),
-        nn.Linear(32, output_dim)
-    )
-    
+
     train_size = int(len(dataset) * 0.7)
     val_size = int(len(dataset) * 0.15)
     test_size = len(dataset) - train_size - val_size
