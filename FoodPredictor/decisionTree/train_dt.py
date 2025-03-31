@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import accuracy_score
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 import sys
 
 sys.path.append('../utils')
@@ -48,29 +48,53 @@ def split_data(X, y):
     )
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-def train_decision_tree(X_train, y_train):
+def tune_decision_tree(X_train, y_train):
     """
-    Trains a DecisionTreeClassifier.
+    Tunes hyperparameters for a DecisionTreeClassifier using GridSearchCV.
     Returns:
-      The trained decision tree model.
+      best_dt: The best decision tree model.
     """
-    dt_model = DecisionTreeClassifier(random_state=RANDOM_STATE)
-    dt_model.fit(X_train, y_train)
-    return dt_model
+    param_grid_dt = {
+        'max_depth': [None, 5, 10, 15, 20],
+        'min_samples_split': [2, 5, 10],
+        'min_samples_leaf': [1, 2, 5],
+        'criterion': ['gini', 'entropy']
+    }
+    
+    dt = DecisionTreeClassifier(random_state=RANDOM_STATE)
+    grid_dt = GridSearchCV(dt, param_grid_dt, cv=5, n_jobs=-1)
+    grid_dt.fit(X_train, y_train)
+    
+    print("Best Decision Tree Parameters:")
+    print(grid_dt.best_params_)
+    print("Best CV Score: {:.2f}%".format(grid_dt.best_score_ * 100))
+    return grid_dt.best_estimator_
 
-def train_adaboost(X_train, y_train):
+def tune_adaboost(X_train, y_train):
     """
-    Trains an AdaBoostClassifier with a decision tree as the base estimator.
+    Tunes hyperparameters for an AdaBoostClassifier (with a decision tree base estimator) using GridSearchCV.
     Returns:
-      The trained AdaBoost model.
+      best_ada: The best AdaBoost model.
     """
-    ada_model = AdaBoostClassifier(
+    # Note: To tune parameters of the base estimator (DecisionTreeClassifier), prefix with "estimator__"
+    param_grid_ada = {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.5, 1.0, 1.5],
+        'estimator__max_depth': [1, 2, 3]
+    }
+    
+    # Create AdaBoost with a decision tree as the base estimator.
+    ada = AdaBoostClassifier(
         estimator=DecisionTreeClassifier(random_state=RANDOM_STATE),
-        n_estimators=50,
         random_state=RANDOM_STATE
     )
-    ada_model.fit(X_train, y_train)
-    return ada_model
+    grid_ada = GridSearchCV(ada, param_grid_ada, cv=5, n_jobs=-1)
+    grid_ada.fit(X_train, y_train)
+    
+    print("Best AdaBoost Parameters:")
+    print(grid_ada.best_params_)
+    print("Best CV Score: {:.2f}%".format(grid_ada.best_score_ * 100))
+    return grid_ada.best_estimator_
 
 def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Model"):
     """
@@ -85,24 +109,23 @@ def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_
     val_acc = accuracy_score(y_val, y_val_pred) * 100
     test_acc = accuracy_score(y_test, y_test_pred) * 100
     
-    print(f"{model_name} Results:")
+    print(f"\n{model_name} Performance:")
     print("Train Accuracy: {:.2f}%".format(train_acc))
     print("Validation Accuracy: {:.2f}%".format(val_acc))
     print("Test Accuracy: {:.2f}%".format(test_acc))
-    print()
 
 def main():
     # Load and split the dataset
     X, y = load_data(DATASET_PATH)
     X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y)
     
-    # Train and evaluate the Decision Tree model
-    dt_model = train_decision_tree(X_train, y_train)
-    evaluate_model(dt_model, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Decision Tree")
+    # Tune and evaluate the Decision Tree model
+    best_dt = tune_decision_tree(X_train, y_train)
+    evaluate_model(best_dt, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Decision Tree")
     
-    # Train and evaluate the AdaBoost (boosted decision tree) model
-    ada_model = train_adaboost(X_train, y_train)
-    evaluate_model(ada_model, X_train, y_train, X_val, y_val, X_test, y_test, model_name="AdaBoost")
+    # Tune and evaluate the AdaBoost (boosted decision tree) model
+    best_ada = tune_adaboost(X_train, y_train)
+    evaluate_model(best_ada, X_train, y_train, X_val, y_val, X_test, y_test, model_name="AdaBoost")
 
 if __name__ == '__main__':
     main()
