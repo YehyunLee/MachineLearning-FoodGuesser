@@ -39,16 +39,38 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, d
         # Replace MISSING_VALUE with empty string
         processed_column = column.replace("MISSING_VALUE", "")
         all_words = ' '.join(processed_column).split()
+        
+        # Handle case where there are no words (empty column)
+        if not all_words:
+            return pd.DataFrame(0, index=range(len(column)), columns=['no_features'])
+            
         most_common = Counter(all_words).most_common(max_features)
         vocab = [word for word, _ in most_common]
+        
+        # Handle case where vocab is empty after processing
+        if not vocab:
+            return pd.DataFrame(0, index=range(len(column)), columns=['no_features'])
+            
         bow = []
         for text in processed_column:
             word_count = Counter(text.split())
             bow.append([word_count.get(word, 0) for word in vocab])
-        return pd.DataFrame(bow, columns=vocab if vocab else ['no_features'])
+        
+        return pd.DataFrame(bow, columns=vocab)
 
-    bow_q5 = bag_of_words(df["Q5 Cleaned"], max_features=100)
-    bow_q6 = bag_of_words(df["Q6 Cleaned"], max_features=50)
+    # Create bow features with improved error handling
+    try:
+        bow_q5 = bag_of_words(df["Q5 Cleaned"], max_features=100)
+    except Exception as e:
+        print(f"Warning: Error processing Q5 bag-of-words: {e}")
+        bow_q5 = pd.DataFrame(0, index=range(len(df)), columns=['no_features_q5'])
+    
+    try:
+        bow_q6 = bag_of_words(df["Q6 Cleaned"], max_features=50)
+    except Exception as e:
+        print(f"Warning: Error processing Q6 bag-of-words: {e}")
+        bow_q6 = pd.DataFrame(0, index=range(len(df)), columns=['no_features_q6'])
+        
     print(f"Shape of bow_q5: {bow_q5.shape}")
     print(f"Shape of bow_q6: {bow_q6.shape}")
 
