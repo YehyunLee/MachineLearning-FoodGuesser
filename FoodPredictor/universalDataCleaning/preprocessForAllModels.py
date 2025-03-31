@@ -79,7 +79,7 @@ def clean_hot_sauce(value):
     return value if value in valid_options else "N/A"
 
 # Main preprocessing function
-def preprocess(file_path, output_path):
+def preprocess(file_path, output_path=None, return_df=False):
     # Load data
     df = pd.read_csv(file_path, dtype=str)
 
@@ -120,9 +120,16 @@ def preprocess(file_path, output_path):
     # convert all columns to string
     final_df = final_df.astype(str)
 
+    # If in return mode, skip saving and return directly
+    if return_df:
+        print(f"Returning cleaned data with shape: {final_df.shape} (not saving to file)")
+        return final_df
+
     # Save cleaned file
-    final_df.to_csv(output_path, index=False, quoting=1) # quoting=1 to avoid double quotes around strings
-    print(f"Cleaned data saved to {output_path}")
+    if output_path is not None:
+        final_df.to_csv(output_path, index=False, quoting=1)  # quoting=1 to avoid double quotes around strings
+        print(f"Cleaned data saved to {output_path}")
+    return final_df
 
 
 # preprocess("../data/raw/cleaned_data_combined.csv", "../data/cleanedWithScript/cleaned_data_universal.csv")

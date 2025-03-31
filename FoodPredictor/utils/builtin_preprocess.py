@@ -3,9 +3,23 @@ import numpy as np
 from collections import Counter
 
 
-def preprocess(file_path, normalize_and_onehot=False, mode="full"):
-    # Load data
-    df = pd.read_csv(file_path, dtype=str)
+def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None):
+    # If a DataFrame is provided, use it; otherwise read from file_path.
+    if df_in is not None:
+        df = df_in.copy()
+    else:
+        df = pd.read_csv(file_path, dtype=str)
+
+    # Rename "Q5: What movie do you think of when thinking of this food item?","Q6: What drink would you pair with this food item?"
+    # to "Q5 Cleaned" and "Q6 Cleaned"
+    df.rename(columns={
+        "Q2: How many ingredients would you expect this food item to contain?": "Q2 Cleaned",
+        "Q4: How much would you expect to pay for one serving of this food item?": "Q4 Cleaned",
+        "Q5: What movie do you think of when thinking of this food item?": "Q5 Cleaned",
+        "Q6: What drink would you pair with this food item?": "Q6 Cleaned"
+    }, inplace=True)
+    # Convert all columns to string
+    df = df.astype(str)
     
     # Record initial row count before dropping missing values
     initial_rows = len(df)
