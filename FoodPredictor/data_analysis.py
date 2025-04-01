@@ -195,23 +195,58 @@ def analyze_label_correlations(df):
     ]
     
     for col in categorical_cols:
-        plt.figure(figsize=(15, 10))
+        # Create a larger figure to accommodate labels
+        plt.figure(figsize=(18, 12))
         
         short_col = QUESTION_MAPPING.get(col, col)
         simple_name = short_col.split(':')[0].strip().lower()
         
-        # Create a cross-tabulation
-        cross_tab = pd.crosstab(df['Label'], df[col])
-        cross_tab_norm = cross_tab.div(cross_tab.sum(axis=1), axis=0)
+        # Special handling for Q3 to fix duplicate/messy categories
+        if col == "Q3: In what setting would you expect this food to be served? Please check all that apply":
+            # Extract the main categories from the responses
+            main_categories = [
+                "Week day lunch", "Week day dinner", "Weekend lunch", 
+                "Weekend dinner", "At a party", "Late night snack"
+            ]
+            
+            # Create a new DataFrame to hold binary indicators for each category
+            binary_df = pd.DataFrame(index=df.index)
+            for category in main_categories:
+                # If the category appears in the response string, mark it as 1
+                binary_df[category] = df[col].str.contains(category).astype(int)
+            
+            # Group by label and calculate proportion for each category
+            grouped = binary_df.groupby(df['Label']).mean()
+            
+            # Create a grouped bar plot instead of stacked
+            ax = grouped.plot(kind='bar', figsize=(18, 10))
+            plt.title(f"{short_col} by Food Type", fontsize=16)
+            plt.ylabel("Proportion", fontsize=14)
+            plt.xticks(rotation=0, fontsize=14)
+            plt.legend(fontsize=12)
+            
+            # Adjust the legend position
+            plt.legend(title=short_col, bbox_to_anchor=(1.05, 1), 
+                      loc='upper left', fontsize=12)
+            
+        else:
+            # Regular processing for other columns
+            # Create a cross-tabulation
+            cross_tab = pd.crosstab(df['Label'], df[col])
+            cross_tab_norm = cross_tab.div(cross_tab.sum(axis=1), axis=0)
+            
+            # Plot normalized stacked bar chart
+            ax = cross_tab_norm.plot(kind='bar', stacked=True)
+            plt.title(f"{short_col} by Food Type", fontsize=16)
+            plt.ylabel("Proportion", fontsize=14)
+            plt.xticks(rotation=0, fontsize=14)
+            
+            # For other questions, just place the legend outside
+            plt.legend(title=short_col, bbox_to_anchor=(1.05, 1), 
+                      loc='upper left', fontsize=12)
         
-        # Plot normalized stacked bar chart
-        cross_tab_norm.plot(kind='bar', stacked=True)
-        plt.title(f"{short_col} by Food Type")
-        plt.ylabel("Proportion")
-        plt.xticks(rotation=0)
-        plt.legend(title=short_col, bbox_to_anchor=(1, 1))
         plt.tight_layout()
-        plt.savefig(f"{OUTPUT_DIR}/{simple_name}_by_label.png")
+        plt.savefig(f"{OUTPUT_DIR}/{simple_name}_by_label.png", bbox_inches='tight')
         plt.close()
     
     # Analyze text features (Q5, Q6) by label
