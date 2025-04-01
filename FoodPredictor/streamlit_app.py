@@ -22,7 +22,7 @@ from pred import naive_bayes_predict, load_model_params
 
 # Set page configuration
 st.set_page_config(
-    page_title="Food Predictor",
+    page_title="AI Food Guesser",
     page_icon="🍕",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -68,7 +68,7 @@ def main():
     """Main function to create the Streamlit app."""
     
     # Title and intro
-    st.markdown("<h1 class='title'>🍽️ AI Food Predictor 🍽️</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='title'>🍽️ AI Food Guesser 🍽️</h1>", unsafe_allow_html=True)
     st.markdown("""
     Tell us about your food preferences, and we'll predict whether it's Pizza, Shawarma, or Sushi!
     """)
