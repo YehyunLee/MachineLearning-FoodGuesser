@@ -70,7 +70,7 @@ def main():
     # Title and intro
     st.markdown("<h1 class='title'>🍽️ AI Food Guesser 🍽️</h1>", unsafe_allow_html=True)
     st.markdown("""
-    Tell us about your food preferences, and we'll predict whether it's Pizza, Shawarma, or Sushi!
+    Tell us about your food preferences, and we'll guess whether it's Pizza, Shawarma, or Sushi!
     """)
     
     # Create a form for user input
@@ -124,7 +124,7 @@ def main():
                          index=3)
         
         # Submit button
-        submit = st.form_submit_button("Predict Food Type!")
+        submit = st.form_submit_button("Guess Food Type!")
     
     # Process the prediction when the form is submitted
     if submit:
@@ -172,7 +172,7 @@ def main():
             css_class = prediction.lower()
             st.markdown(f"""
                 <div class='prediction {css_class}' style='color: black;'>
-                    Our model predicts: <strong>{prediction}</strong>
+                    Our model guesses your food is: <strong>{prediction}</strong>
                 </div>
             """, unsafe_allow_html=True)
             
