@@ -30,6 +30,19 @@ DATA_PATH = 'data/cleanedWithScript/manual_cleaned_data_universal.csv'
 OUTPUT_DIR = 'analysis_results'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+# Define question mapping for shorter titles
+QUESTION_MAPPING = {
+    "Q1: From a scale 1 to 5, how complex is it to make this food? (Where 1 is the most simple, and 5 is the most complex)": "Q1: Complexity",
+    "Q2 Cleaned": "Q2: Ingredients",
+    "Q3: In what setting would you expect this food to be served? Please check all that apply": "Q3: Setting",
+    "Q4 Cleaned": "Q4: Price",
+    "Q5 Cleaned": "Q5: Movie",
+    "Q6 Cleaned": "Q6: Drink",
+    "Q7: When you think about this food item, who does it remind you of?": "Q7: Association",
+    "Q8: How much hot sauce would you add to this food item?": "Q8: Hot Sauce",
+    "Label": "Food Type"
+}
+
 def load_and_process_data():
     """Load, clean, and preprocess the data."""
     print("Loading and preprocessing data...")
@@ -88,10 +101,17 @@ def analyze_categorical_distribution(df, column):
     # Create bar plot
     plt.figure(figsize=(12, 6))
     sns.barplot(x=column, y='Count', data=value_counts)
-    plt.title(f"Distribution of {column}")
+    
+    # Use short title
+    short_title = QUESTION_MAPPING.get(column, column)
+    plt.title(f"Distribution of {short_title}")
+    
     plt.xticks(rotation=45, ha='right')
     plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/{column.replace(':', '').replace(' ', '_')}_distribution.png")
+    
+    # Use simple filename
+    simple_name = short_title.split(':')[0].strip().lower()
+    plt.savefig(f"{OUTPUT_DIR}/{simple_name}_distribution.png")
     plt.close()
     
     return value_counts
@@ -108,16 +128,22 @@ def analyze_numerical_distribution(df, column):
     # Create figure with two subplots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
     
+    # Get short title
+    short_title = QUESTION_MAPPING.get(column, column)
+    
     # Histogram
     sns.histplot(df[column].dropna(), kde=True, ax=ax1)
-    ax1.set_title(f"Histogram of {column}")
+    ax1.set_title(f"Histogram of {short_title}")
     
     # Box plot
     sns.boxplot(y=df[column].dropna(), ax=ax2)
-    ax2.set_title(f"Box Plot of {column}")
+    ax2.set_title(f"Box Plot of {short_title}")
     
     plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/{column.replace(':', '').replace(' ', '_')}_distribution.png")
+    
+    # Use simple filename
+    simple_name = short_title.split(':')[0].strip().lower()
+    plt.savefig(f"{OUTPUT_DIR}/{simple_name}_distribution.png")
     plt.close()
     
     # Calculate statistics
@@ -148,9 +174,17 @@ def analyze_label_correlations(df):
     label_means.plot(kind='bar')
     plt.title("Average Numerical Features by Food Type")
     plt.ylabel("Average Value")
-    plt.xticks(rotation=0)
+    
+    # Rename x-axis labels to shorter versions
+    plt.gca().set_xticklabels(plt.gca().get_xticklabels(), rotation=0)
+    
+    # Rename the legend labels
+    handles, labels = plt.gca().get_legend_handles_labels()
+    short_labels = [QUESTION_MAPPING.get(label, label) for label in labels]
+    plt.legend(handles, short_labels)
+    
     plt.tight_layout()
-    plt.savefig(f"{OUTPUT_DIR}/numerical_features_by_label.png")
+    plt.savefig(f"{OUTPUT_DIR}/numerical_by_label.png")
     plt.close()
     
     # Analyze categorical distributions by label
@@ -163,18 +197,21 @@ def analyze_label_correlations(df):
     for col in categorical_cols:
         plt.figure(figsize=(15, 10))
         
+        short_col = QUESTION_MAPPING.get(col, col)
+        simple_name = short_col.split(':')[0].strip().lower()
+        
         # Create a cross-tabulation
         cross_tab = pd.crosstab(df['Label'], df[col])
         cross_tab_norm = cross_tab.div(cross_tab.sum(axis=1), axis=0)
         
         # Plot normalized stacked bar chart
         cross_tab_norm.plot(kind='bar', stacked=True)
-        plt.title(f"{col} by Food Type")
+        plt.title(f"{short_col} by Food Type")
         plt.ylabel("Proportion")
         plt.xticks(rotation=0)
-        plt.legend(title=col, bbox_to_anchor=(1, 1))
+        plt.legend(title=short_col, bbox_to_anchor=(1, 1))
         plt.tight_layout()
-        plt.savefig(f"{OUTPUT_DIR}/{col.replace(':', '').replace(' ', '_')}_by_label.png")
+        plt.savefig(f"{OUTPUT_DIR}/{simple_name}_by_label.png")
         plt.close()
     
     # Analyze text features (Q5, Q6) by label
@@ -183,7 +220,11 @@ def analyze_label_correlations(df):
     for col in text_cols:
         plt.figure(figsize=(15, 12))
         fig, axes = plt.subplots(1, 3, figsize=(18, 6))
-        fig.suptitle(f"Most Common Words in {col} by Food Type")
+        
+        short_col = QUESTION_MAPPING.get(col, col)
+        simple_name = short_col.split(':')[0].strip().lower()
+        
+        fig.suptitle(f"Most Common Words in {short_col} by Food Type")
         
         for i, label in enumerate(['Pizza', 'Shawarma', 'Sushi']):
             # Get texts for this label
@@ -201,7 +242,7 @@ def analyze_label_correlations(df):
             axes[i].set_title(f"{label}")
             
         plt.tight_layout()
-        plt.savefig(f"{OUTPUT_DIR}/{col.replace(':', '').replace(' ', '_')}_by_label.png")
+        plt.savefig(f"{OUTPUT_DIR}/{simple_name}_by_label.png")
         plt.close()
     
     return label_means
@@ -277,8 +318,8 @@ def analyze_processed_data(processed_df):
     # Create pie chart of feature types
     plt.figure(figsize=(10, 8))
     plt.pie(feature_summary['Count'], labels=feature_summary['Feature Type'], autopct='%1.1f%%')
-    plt.title('Feature Distribution by Type After Processing')
-    plt.savefig(f"{OUTPUT_DIR}/feature_type_distribution.png")
+    plt.title('Feature Distribution by Type')
+    plt.savefig(f"{OUTPUT_DIR}/features_distribution.png")
     plt.close()
     
     return feature_summary
@@ -308,7 +349,7 @@ def main():
     ]
     for col in numerical_cols:
         stats = analyze_numerical_distribution(cleaned_df, col)
-        print(f"\nStatistics for {col}:\n{stats}")
+        print(f"\nStatistics for {QUESTION_MAPPING.get(col, col)}:\n{stats}")
     
     # Categorical features
     categorical_cols = [
@@ -318,13 +359,16 @@ def main():
     ]
     for col in categorical_cols:
         counts = analyze_categorical_distribution(cleaned_df, col)
-        print(f"\nValue counts for {col}:\n{counts}")
+        print(f"\nValue counts for {QUESTION_MAPPING.get(col, col)}:\n{counts}")
     
     # Text features
     text_cols = ["Q5 Cleaned", "Q6 Cleaned"]
     for col in text_cols:
         # Word cloud for text features
         plt.figure(figsize=(12, 8))
+        
+        short_col = QUESTION_MAPPING.get(col, col)
+        simple_name = short_col.split(':')[0].strip().lower()
         
         # Count word frequencies
         all_texts = ' '.join(cleaned_df[col].dropna()).lower()
@@ -335,9 +379,9 @@ def main():
         
         # Create bar chart
         sns.barplot(x='Count', y='Word', data=top_words)
-        plt.title(f"Top 20 Words in {col}")
+        plt.title(f"Top 20 Words in {short_col}")
         plt.tight_layout()
-        plt.savefig(f"{OUTPUT_DIR}/{col.replace(':', '').replace(' ', '_')}_top_words.png")
+        plt.savefig(f"{OUTPUT_DIR}/{simple_name}_top_words.png")
         plt.close()
     
     # Analyze label correlations
