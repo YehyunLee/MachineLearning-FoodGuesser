@@ -201,13 +201,20 @@ def analyze_label_correlations(df):
         short_col = QUESTION_MAPPING.get(col, col)
         simple_name = short_col.split(':')[0].strip().lower()
         
-        # Special handling for Q3 to fix duplicate/messy categories
-        if col == "Q3: In what setting would you expect this food to be served? Please check all that apply":
-            # Extract the main categories from the responses
-            main_categories = [
-                "Week day lunch", "Week day dinner", "Weekend lunch", 
-                "Weekend dinner", "At a party", "Late night snack"
-            ]
+        # Special handling for multi-select categorical columns (Q3 and Q7)
+        if col in ["Q3: In what setting would you expect this food to be served? Please check all that apply",
+                   "Q7: When you think about this food item, who does it remind you of?"]:
+            
+            # Define the main categories for each question
+            if col == "Q3: In what setting would you expect this food to be served? Please check all that apply":
+                main_categories = [
+                    "Week day lunch", "Week day dinner", "Weekend lunch", 
+                    "Weekend dinner", "At a party", "Late night snack"
+                ]
+            else:  # Q7
+                main_categories = [
+                    "Friends", "Teachers", "Strangers", "Parents", "Siblings"
+                ]
             
             # Create a new DataFrame to hold binary indicators for each category
             binary_df = pd.DataFrame(index=df.index)
@@ -223,14 +230,12 @@ def analyze_label_correlations(df):
             plt.title(f"{short_col} by Food Type", fontsize=16)
             plt.ylabel("Proportion", fontsize=14)
             plt.xticks(rotation=0, fontsize=14)
-            plt.legend(fontsize=12)
             
-            # Adjust the legend position
-            plt.legend(title=short_col, bbox_to_anchor=(1.05, 1), 
-                      loc='upper left', fontsize=12)
+            # Format legend
+            plt.legend(title=None, fontsize=12, loc='upper right')
             
         else:
-            # Regular processing for other columns
+            # Regular processing for other columns (like Q8)
             # Create a cross-tabulation
             cross_tab = pd.crosstab(df['Label'], df[col])
             cross_tab_norm = cross_tab.div(cross_tab.sum(axis=1), axis=0)
