@@ -124,6 +124,9 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, d
     # Replace any remaining NaNs with zeros instead of dropping rows
     final_df.fillna(0, inplace=True)
 
+    # shuffle the rows so that the order of the data is not biased
+    final_df = final_df.sample(frac=1, random_state=42).reset_index(drop=True)  # drop here is for resetting the index
+
     print(f"Preprocessed data shape: {final_df.shape}")
     print(f"Preprocessed data columns: {final_df.columns}")
     return final_df
