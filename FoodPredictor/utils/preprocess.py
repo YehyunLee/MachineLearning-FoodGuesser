@@ -14,7 +14,7 @@ from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 #     return (series - series.min()) / (series.max() - series.min())
     
 
-def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, drop_na=True):
+def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, drop_na=False):
     # If a DataFrame is provided, use it; otherwise read from file_path.
     if df_in is not None:
         df = df_in.copy()
@@ -123,6 +123,9 @@ def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, d
     
     # Replace any remaining NaNs with zeros instead of dropping rows
     final_df.fillna(0, inplace=True)
+
+    # shuffle the rows so that the order of the data is not biased
+    final_df = final_df.sample(frac=1, random_state=42).reset_index(drop=True)  # drop here is for resetting the index
 
     print(f"Preprocessed data shape: {final_df.shape}")
     print(f"Preprocessed data columns: {final_df.columns}")

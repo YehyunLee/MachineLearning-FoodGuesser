@@ -3,7 +3,7 @@ import numpy as np
 from collections import Counter
 
 
-def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, drop_na=True):
+def preprocess(file_path, normalize_and_onehot=False, mode="full", df_in=None, drop_na=False):
     # If a DataFrame is provided, use it; otherwise read from file_path.
     if df_in is not None:
         df = df_in.copy()

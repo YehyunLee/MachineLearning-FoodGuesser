@@ -1,0 +1,8 @@
+Test,Accuracy
+All features,87.65182186234817
+Without Q5 (Movie),82.18623481781377
+Without Q6 (Drink),82.38866396761134
+Without Q5 & Q6,72.67206477732793
+Without Q1 (Complexity),87.85425101214574
+"Only numerical (Q1, Q2, Q4)",46.76113360323887
+"Only categorical (Q3, Q7, Q8)",72.8744939271255
