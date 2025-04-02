@@ -1,10 +1,11 @@
 import os
+import sys
 import numpy as np
+import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split, GridSearchCV
-import sys
 
 sys.path.append('../utils')
 from preprocess import preprocess
@@ -100,6 +101,7 @@ def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_
     """
     Evaluates the given model on train, validation, and test sets.
     Prints the accuracy for each set.
+    Returns a dictionary with the accuracies.
     """
     y_train_pred = model.predict(X_train)
     y_val_pred = model.predict(X_val)
@@ -113,6 +115,40 @@ def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_
     print("Train Accuracy: {:.2f}%".format(train_acc))
     print("Validation Accuracy: {:.2f}%".format(val_acc))
     print("Test Accuracy: {:.2f}%".format(test_acc))
+    
+    return {"model_name": model_name, "train": train_acc, "validation": val_acc, "test": test_acc}
+
+def plot_performance(performance_list):
+    """
+    Displays a grouped bar chart comparing train, validation, and test accuracies
+    for each model in performance_list.
+    performance_list: list of dictionaries returned by evaluate_model.
+    """
+    models = [perf["model_name"] for perf in performance_list]
+    metrics = ["train", "validation", "test"]
+    
+    # Prepare the data in the same order for each model
+    data = []
+    for perf in performance_list:
+        data.append([perf[m] for m in metrics])
+    data = np.array(data)  # shape: (num_models, num_metrics)
+    
+    x = np.arange(len(metrics))
+    width = 0.35  # width of each bar
+    
+    fig, ax = plt.subplots()
+    
+    for i, model_data in enumerate(data):
+        ax.bar(x + i * width, model_data, width, label=models[i])
+    
+    ax.set_ylabel("Accuracy (%)")
+    ax.set_title("Model Performance Comparison")
+    ax.set_xticks(x + width / 2)
+    ax.set_xticklabels([metric.capitalize() for metric in metrics])
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.show()
 
 def main():
     # Load and split the dataset
@@ -121,11 +157,14 @@ def main():
     
     # Tune and evaluate the Decision Tree model
     best_dt = tune_decision_tree(X_train, y_train)
-    evaluate_model(best_dt, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Decision Tree")
+    dt_performance = evaluate_model(best_dt, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Decision Tree")
     
     # Tune and evaluate the AdaBoost (boosted decision tree) model
     best_ada = tune_adaboost(X_train, y_train)
-    evaluate_model(best_ada, X_train, y_train, X_val, y_val, X_test, y_test, model_name="AdaBoost")
+    ada_performance = evaluate_model(best_ada, X_train, y_train, X_val, y_val, X_test, y_test, model_name="AdaBoost")
+    
+    # Plot and display performance comparison
+    plot_performance([dt_performance, ada_performance])
 
 if __name__ == '__main__':
     main()
