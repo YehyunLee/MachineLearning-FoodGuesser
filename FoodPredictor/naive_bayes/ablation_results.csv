@@ -1,5 +1,5 @@
 Test,Accuracy
-All features,87.65182186234817
+All features,87.65182186234817 *Correction: 88.26%
 Without Q5 (Movie),82.18623481781377
 Without Q6 (Drink),82.38866396761134
 Without Q5 & Q6,72.67206477732793
