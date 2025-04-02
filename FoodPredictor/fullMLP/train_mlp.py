@@ -56,11 +56,11 @@ def train(train_loader, val_loader, model, loss_fn, optimizer):
             for x, y in val_loader:
                 pred = model(x)
                 loss = loss_fn(pred, y)
-                val_running_loss += loss.item()
+                val_running_loss += loss.item() * x.size(0)
 
                 num_correct += torch.sum(torch.argmax(pred, axis=1) == torch.argmax(y, axis=1))
                 num_samples += x.size(0)
-        current_val_loss = val_running_loss / len(val_loader)
+        current_val_loss = val_running_loss / num_samples
         val_loss_history.append(current_val_loss)
         accuracy = num_correct.item() / num_samples * 100
         accuracy_history.append(accuracy)
@@ -113,17 +113,22 @@ def log_experiment(train_loss_history, val_loss_history, accuracy_history, model
     plt.savefig(f'{dir_path}/loss.png')
 
 
-def evaluate_test_set(test_loader, model):
+def evaluate_test_set(test_loader, model, loss_fn):
     model.eval()
     num_correct = 0
     num_samples = 0
+
+    test_running_loss = 0
     with torch.no_grad():
         for x, y in test_loader:
             pred = model(x)
+            test_running_loss += loss_fn(pred, y).item() * x.size(0)
             num_correct += torch.sum(torch.argmax(pred, axis=1) == torch.argmax(y, axis=1))
             num_samples += x.size(0)
+    test_loss = test_running_loss / num_samples
     test_accuracy = num_correct.item() / num_samples * 100
     print(f'Final Test Accuracy: {test_accuracy}%')
+    print(f'Final Test Loss: {test_loss}')
     return test_accuracy
 
 
@@ -170,4 +175,4 @@ if __name__ == '__main__':
     train(train_loader, val_loader, model, loss_fn, optimizer)
 
     # Evaluate on the test set
-    evaluate_test_set(test_loader, model)
+    evaluate_test_set(test_loader, model, loss_fn)
