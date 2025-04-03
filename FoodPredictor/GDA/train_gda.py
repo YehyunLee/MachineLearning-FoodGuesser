@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 import sys
+from sklearn.metrics import log_loss
 
 sys.path.append('../utils')
 from preprocess import preprocess
@@ -27,13 +28,15 @@ def main():
     print(f"Final data matrix X shape: {X.shape}")
     print(f"Labels shape: {y.shape}")
     
-    # Train-test split (80% training, 20% test)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
+    # Train-test split (70% training, 15% validation, 15% test)
+    X_train, X_val_test, y_train, y_val_test = train_test_split(X, y, test_size=0.3, random_state=1)
+    X_val, X_test, y_val, y_test = train_test_split(X_val_test, y_val_test, test_size=0.5, random_state=1)
     
     model = QuadraticDiscriminantAnalysis()
     model.fit(X_train, y_train)
-    accuracy = model.score(X_test, y_test)
-    print(f"Accuracy: {accuracy}")
+    accuracy = model.score(X_val, y_val)
+    loss = log_loss(y_val, model.predict_proba(X_val))
+    print(f"Accuracy: {accuracy}, Loss: {loss}")
 
 if __name__ == '__main__':
     main()
