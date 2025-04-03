@@ -34,6 +34,7 @@ class SoftmaxRegression(nn.Module):
 def train_loop(train_loader, model, loss_fn, optimizer):
     model.train()
     running_loss = 0
+    num_samples = 0
     for x, y in train_loader:
         pred = model(x)
         loss = loss_fn(pred, y)
@@ -42,9 +43,10 @@ def train_loop(train_loader, model, loss_fn, optimizer):
         optimizer.step()
         optimizer.zero_grad()
 
-        running_loss += loss.item()
+        num_samples += x.size(0)
+        running_loss += loss.item() * x.size(0)
 
-    return running_loss / len(train_loader)
+    return running_loss / num_samples
 
 # Validation loop
 def validate(val_loader, model, loss_fn):
@@ -56,13 +58,13 @@ def validate(val_loader, model, loss_fn):
         for x, y in val_loader:
             pred = model(x)
             loss = loss_fn(pred, y)
-            val_loss += loss.item()
+            val_loss += loss.item() * x.size(0)
 
             num_correct += torch.sum(torch.argmax(pred, axis=1) == torch.argmax(y, axis=1))
             num_samples += x.size(0)
 
     accuracy = num_correct.item() / num_samples * 100
-    return val_loss / len(val_loader), accuracy
+    return val_loss / num_samples, accuracy
 
 # Logging experiment results
 def log_experiment(train_loss_history, val_loss_history, accuracy_history, model):
@@ -138,15 +140,20 @@ def train(train_loader, val_loader, model, loss_fn, optimizer):
 
     log_experiment(train_loss_history, val_loss_history, accuracy_history, model)
 
-def ensemble_predict(models, dataloader, output_dim):
+def ensemble_predict(models, dataloader, output_dim, loss_fn):
     all_preds = []
     all_targets = []
+    running_loss = 0
+    total_samples = 0
     with torch.no_grad():
         for x, y in dataloader:
             preds_sum = torch.zeros(x.size(0), output_dim)
             for m in models:
                 preds_sum += m(x)
+                
             avg_preds = preds_sum / len(models)
+            running_loss += loss_fn(avg_preds, y).item() * x.size(0)
+            total_samples += x.size(0)
             all_preds.append(avg_preds)
             all_targets.append(y)
     all_preds = torch.cat(all_preds)
@@ -155,7 +162,8 @@ def ensemble_predict(models, dataloader, output_dim):
     target_classes = torch.argmax(all_targets, dim=1)
     correct = torch.sum(predicted_classes == target_classes).item()
     accuracy = correct / all_preds.size(0) * 100
-    return accuracy
+    loss = running_loss / total_samples
+    return accuracy, loss
 
 if __name__ == '__main__':
     # For Softmax training, use bag-of-words from Q5 and Q6 (and Label)
@@ -209,8 +217,9 @@ if __name__ == '__main__':
             ensemble_models.append(model)
         
         # Evaluate ensemble on validation data
-        ensemble_accuracy = ensemble_predict(ensemble_models, val_loader, output_dim)
+        ensemble_accuracy, ensemble_loss = ensemble_predict(ensemble_models, val_loader, output_dim, loss_fn)
         print(f"Ensemble validation accuracy: {ensemble_accuracy:.2f}%")
+        print(f"Ensemble validation loss: {ensemble_loss}")
         
         # Log the ensemble experiment similar to mlp train.py logs
         log_ensemble_experiment(ensemble_accuracy, ensemble_models)

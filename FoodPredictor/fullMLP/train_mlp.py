@@ -37,7 +37,7 @@ def train_loop(train_loader, model, loss_fn, optimizer):
 
     
 def train(train_loader, val_loader, model, loss_fn, optimizer):
-    patience = 20  # Number of epochs without improvement before stopping
+    patience = 5  # Number of epochs without improvement before stopping
     best_val_loss = float('inf')
     epochs_without_improvement = 0
 
