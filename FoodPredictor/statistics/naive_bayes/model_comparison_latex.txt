@@ -1,0 +1,21 @@
+\begin{table}[H]
+\centering
+\caption{Comparison of Naive Bayes Models}
+\label{tab:nb_comparison}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metric} & \textbf{Base Model} & \textbf{Tuned Model} \\
+\midrule
+Accuracy (\%) & 88.25910931174089 & 88.48484848484848 \\
+Precision (\%) & 88.90983487440582 & 88.9078443234523 \\
+Recall (\%) & 88.25910931174089 & 88.48484848484848 \\
+F1 Score (\%) & 88.34375686865006 & 88.59636184857425 \\
+Log Loss & 0.3419710786853786 & 0.38190687849487964 \\
+Alpha & 1.0 & 0.5 \\
+Fit Prior & True & True \\
+\midrule
+K-fold CV Accuracy (\%) & - & 87.48992212551533 $\pm$ 1.481147759228648 \\
+K-fold CV Log Loss & - & 0.3582139989233819 $\pm$ 0.048451107072492165 \\
+\bottomrule
+\end{tabular}
+\end{table}
