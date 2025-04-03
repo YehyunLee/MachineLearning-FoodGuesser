@@ -106,15 +106,12 @@ def plot_learning_curves(X, y, base_params, tuned_params):
         cv=5, scoring='accuracy', n_jobs=-1
     )
     
-    train_mean = np.mean(train_scores, axis=1) * 100
-    train_std = np.std(train_scores, axis=1) * 100
+    # Only plot validation scores (cross-validation score)
     val_mean = np.mean(val_scores, axis=1) * 100
     val_std = np.std(val_scores, axis=1) * 100
     
-    axes[0].plot(train_sizes, train_mean, label='Training score')
-    axes[0].fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1)
-    axes[0].plot(train_sizes, val_mean, label='Cross-validation score')
-    axes[0].fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1)
+    axes[0].plot(train_sizes, val_mean, 'orange', label='Cross-validation score')
+    axes[0].fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1, color='orange')
     axes[0].set_title('Base Model Learning Curve')
     axes[0].set_xlabel('Training Examples')
     axes[0].set_ylabel('Accuracy (%)')
@@ -127,15 +124,12 @@ def plot_learning_curves(X, y, base_params, tuned_params):
         cv=5, scoring='accuracy', n_jobs=-1
     )
     
-    train_mean = np.mean(train_scores, axis=1) * 100
-    train_std = np.std(train_scores, axis=1) * 100
+    # Only plot validation scores (cross-validation score)
     val_mean = np.mean(val_scores, axis=1) * 100
     val_std = np.std(val_scores, axis=1) * 100
     
-    axes[1].plot(train_sizes, train_mean, label='Training score')
-    axes[1].fill_between(train_sizes, train_mean - train_std, train_mean + train_std, alpha=0.1)
-    axes[1].plot(train_sizes, val_mean, label='Cross-validation score')
-    axes[1].fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1)
+    axes[1].plot(train_sizes, val_mean, 'orange', label='Cross-validation score')
+    axes[1].fill_between(train_sizes, val_mean - val_std, val_mean + val_std, alpha=0.1, color='orange')
     axes[1].set_title('Tuned Model Learning Curve')
     axes[1].set_xlabel('Training Examples')
     axes[1].set_ylabel('Accuracy (%)')
