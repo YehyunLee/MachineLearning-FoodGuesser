@@ -1,8 +1,8 @@
 import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, classification_report, log_loss
-from sklearn.model_selection import StratifiedKFold, GridSearchCV
+from sklearn.metrics import accuracy_score, classification_report, log_loss, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.model_selection import StratifiedKFold, GridSearchCV, train_test_split
 import sys
 import pickle
 import os
@@ -13,8 +13,9 @@ from preprocess import preprocess
 # Path to dataset
 DATASET_PATH = '../data/cleanedWithScript/manual_cleaned_data_universal.csv'
 
-def k_fold_tune_naive_bayes(k=5):
+def k_fold_tune_naive_bayes(k=5, test_size=0.3):
     print(f"Running {k}-fold cross-validation with hyperparameter tuning...")
+    print(f"Using train-test split: {100-test_size*100}% training, {test_size*100}% testing")
     
     # Load data in full mode to retrieve bag-of-words and one-hot encoded Label
     df = preprocess(DATASET_PATH, normalize_and_onehot=False, mode="full")
@@ -32,6 +33,12 @@ def k_fold_tune_naive_bayes(k=5):
 
     # Save the label mapping for prediction
     label_mapping = {i: col.replace('Label_', '') for i, col in enumerate(label_cols)}
+    
+    # Split into train and test sets (70% train, 30% test)
+    X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=test_size, random_state=42, stratify=y)
+    
+    print(f"Training set size: {X_train_full.shape[0]} samples")
+    print(f"Test set size: {X_test.shape[0]} samples")
 
     # Define hyperparameters to tune
     param_grid = {
@@ -39,7 +46,7 @@ def k_fold_tune_naive_bayes(k=5):
         'fit_prior': [True, False]  # Whether to learn class prior probabilities
     }
 
-    # Initialize stratified k-fold cross-validation
+    # Initialize stratified k-fold cross-validation (on training set only)
     skf = StratifiedKFold(n_splits=k, shuffle=True, random_state=42)
     
     # Track fold results
@@ -51,11 +58,11 @@ def k_fold_tune_naive_bayes(k=5):
     # Track time
     start_time = time.time()
 
-    # Perform k-fold cross-validation
-    for fold, (train_idx, test_idx) in enumerate(skf.split(X, y)):
+    # Perform k-fold cross-validation on the training data only
+    for fold, (train_idx, val_idx) in enumerate(skf.split(X_train_full, y_train_full)):
         print(f"\nFold {fold+1}/{k}")
-        X_train, X_test = X[train_idx], X[test_idx]
-        y_train, y_test = y[train_idx], y[test_idx]
+        X_train, X_val = X_train_full[train_idx], X_train_full[val_idx]
+        y_train, y_val = y_train_full[train_idx], y_train_full[val_idx]
         
         # Create and tune the model with GridSearchCV
         nb = MultinomialNB()
@@ -79,18 +86,18 @@ def k_fold_tune_naive_bayes(k=5):
         best_params_list.append(best_params)
         print(f"Best parameters for fold {fold+1}: {best_params}")
         
-        # Evaluate on test set - accuracy
-        y_pred = best_model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred) * 100
+        # Evaluate on validation set
+        y_pred = best_model.predict(X_val)
+        accuracy = accuracy_score(y_val, y_pred) * 100
         fold_accuracies.append(accuracy)
         
         # Calculate log loss (lower is better)
         # Get probability predictions for each class
-        y_pred_proba = best_model.predict_proba(X_test)
-        logloss = log_loss(y_test, y_pred_proba)
+        y_pred_proba = best_model.predict_proba(X_val)
+        logloss = log_loss(y_val, y_pred_proba)
         fold_log_losses.append(logloss)
         
-        print(f"Fold {fold+1} - Accuracy: {accuracy:.2f}%, Log Loss: {logloss:.4f}")
+        print(f"Fold {fold+1} - Validation Accuracy: {accuracy:.2f}%, Log Loss: {logloss:.4f}")
         
         # Store the model
         fold_models.append(best_model)
@@ -124,10 +131,34 @@ def k_fold_tune_naive_bayes(k=5):
     print(f"\nMost common best alpha: {most_common_alpha}")
     print(f"Most common fit_prior: {most_common_fit_prior}")
     
-    # Train final model with most common parameters on full dataset
-    print("\nTraining final model with most common best parameters...")
+    # Train final model with most common parameters on full training set
+    print("\nTraining final model with most common best parameters on full training set...")
     final_model = MultinomialNB(alpha=most_common_alpha, fit_prior=most_common_fit_prior)
-    final_model.fit(X, y)
+    final_model.fit(X_train_full, y_train_full)
+    
+    # Evaluate on held-out test set
+    print("\n--- Final Evaluation on Test Set ---")
+    y_test_pred = final_model.predict(X_test)
+    y_test_pred_proba = final_model.predict_proba(X_test)
+    
+    # Calculate metrics
+    test_accuracy = accuracy_score(y_test, y_test_pred) * 100
+    test_logloss = log_loss(y_test, y_test_pred_proba)
+    test_precision = precision_score(y_test, y_test_pred, average='weighted') * 100
+    test_recall = recall_score(y_test, y_test_pred, average='weighted') * 100
+    test_f1 = f1_score(y_test, y_test_pred, average='weighted') * 100
+    
+    print(f"Test Set Metrics:")
+    print(f"Accuracy: {test_accuracy:.2f}%")
+    print(f"Log Loss: {test_logloss:.4f}")
+    print(f"Precision: {test_precision:.2f}%")
+    print(f"Recall: {test_recall:.2f}%")
+    print(f"F1 Score: {test_f1:.2f}%")
+    
+    # Print detailed classification report
+    print("\nDetailed Classification Report:")
+    target_names = [label_mapping[i] for i in range(len(label_mapping))]
+    print(classification_report(y_test, y_test_pred, target_names=target_names))
     
     # Total time
     total_time = time.time() - start_time
@@ -152,7 +183,14 @@ def k_fold_tune_naive_bayes(k=5):
         'avg_accuracy': avg_accuracy,
         'std_accuracy': std_accuracy,
         'avg_log_loss': avg_log_loss,
-        'std_log_loss': std_log_loss
+        'std_log_loss': std_log_loss,
+        'test_metrics': {
+            'accuracy': test_accuracy,
+            'log_loss': test_logloss,
+            'precision': test_precision,
+            'recall': test_recall,
+            'f1_score': test_f1
+        }
     }
 
     with open(f'{output_dir}/k_fold_naive_bayes_params.pkl', 'wb') as f:
@@ -167,4 +205,4 @@ def k_fold_tune_naive_bayes(k=5):
     print(f"Full K-fold model saved to {output_dir}/k_fold_naive_bayes_model.pkl")
 
 if __name__ == "__main__":
-    k_fold_tune_naive_bayes(k=5)
+    k_fold_tune_naive_bayes(k=5, test_size=0.1)
