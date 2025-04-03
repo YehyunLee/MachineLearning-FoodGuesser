@@ -21,7 +21,7 @@ ALLOWED_PREDICTIONS = ['Pizza', 'Shawarma', 'Sushi']
 
 # Load model parameters
 def load_model_params():
-    params_path = os.path.join(os.path.dirname(__file__), 'model_params', 'naive_bayes_params.pkl')
+    params_path = os.path.join(os.path.dirname(__file__), 'model_params', 'k_fold_naive_bayes_params.pkl')
     with open(params_path, 'rb') as f:
         return pickle.load(f)
 
