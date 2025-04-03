@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, log_loss
 from sklearn.model_selection import train_test_split
 import sys
 import pickle
@@ -29,16 +29,19 @@ y = np.argmax(df[label_cols].values, axis=1)
 label_mapping = {i: col.replace('Label_', '') for i, col in enumerate(label_cols)}
 
 # Split into train and test sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_train, X_val_test, y_train, y_val_test = train_test_split(X, y, test_size=0.3, random_state=42)
+X_val, X_test, y_val, y_test = train_test_split(X_val_test, y_val_test, test_size=0.5, random_state=42)
 
 # Train Multinomial Naive Bayes
 model = MultinomialNB()
 model.fit(X_train, y_train)
 
 # Predict and evaluate accuracy
-y_pred = model.predict(X_test)
-accuracy = accuracy_score(y_test, y_pred) * 100
-print(f"Naive Bayes Test Accuracy: {accuracy:.2f}%")
+y_pred = model.predict(X_val)
+accuracy = accuracy_score(y_val, y_pred) * 100
+loss = log_loss(y_val, model.predict_proba(X_val))
+print(f"Naive Bayes Validation Accuracy: {accuracy:.2f}%")
+print(f"Naive Bayes Validation Loss: {loss}")
 
 # Save model parameters for later use without sklearn
 output_dir = '../model_params'
