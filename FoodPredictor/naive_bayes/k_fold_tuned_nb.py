@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, log_loss
 from sklearn.model_selection import StratifiedKFold, GridSearchCV
 import sys
 import pickle
@@ -44,6 +44,7 @@ def k_fold_tune_naive_bayes(k=5):
     
     # Track fold results
     fold_accuracies = []
+    fold_log_losses = []
     best_params_list = []
     fold_models = []
     
@@ -78,23 +79,33 @@ def k_fold_tune_naive_bayes(k=5):
         best_params_list.append(best_params)
         print(f"Best parameters for fold {fold+1}: {best_params}")
         
-        # Evaluate on test set
+        # Evaluate on test set - accuracy
         y_pred = best_model.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred) * 100
         fold_accuracies.append(accuracy)
-        print(f"Fold {fold+1} accuracy: {accuracy:.2f}%")
+        
+        # Calculate log loss (lower is better)
+        # Get probability predictions for each class
+        y_pred_proba = best_model.predict_proba(X_test)
+        logloss = log_loss(y_test, y_pred_proba)
+        fold_log_losses.append(logloss)
+        
+        print(f"Fold {fold+1} - Accuracy: {accuracy:.2f}%, Log Loss: {logloss:.4f}")
         
         # Store the model
         fold_models.append(best_model)
 
-    # Calculate average accuracy and standard deviation
+    # Calculate average metrics and standard deviations
     avg_accuracy = np.mean(fold_accuracies)
     std_accuracy = np.std(fold_accuracies)
+    avg_log_loss = np.mean(fold_log_losses)
+    std_log_loss = np.std(fold_log_losses)
     
     print(f"\nK-fold Cross Validation Results (k={k}):")
-    for i, acc in enumerate(fold_accuracies):
-        print(f"Fold {i+1} accuracy: {acc:.2f}%")
+    for i, (acc, ll) in enumerate(zip(fold_accuracies, fold_log_losses)):
+        print(f"Fold {i+1} - Accuracy: {acc:.2f}%, Log Loss: {ll:.4f}")
     print(f"Average accuracy: {avg_accuracy:.2f}% ± {std_accuracy:.2f}%")
+    print(f"Average log loss: {avg_log_loss:.4f} ± {std_log_loss:.4f}")
     
     # Find most common best parameters
     alpha_counts = {}
@@ -137,8 +148,11 @@ def k_fold_tune_naive_bayes(k=5):
             'fit_prior': most_common_fit_prior
         },
         'fold_accuracies': fold_accuracies,
+        'fold_log_losses': fold_log_losses,
         'avg_accuracy': avg_accuracy,
-        'std_accuracy': std_accuracy
+        'std_accuracy': std_accuracy,
+        'avg_log_loss': avg_log_loss,
+        'std_log_loss': std_log_loss
     }
 
     with open(f'{output_dir}/k_fold_naive_bayes_params.pkl', 'wb') as f:
