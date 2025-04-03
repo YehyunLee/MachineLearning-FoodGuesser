@@ -41,15 +41,24 @@ def split_data(X, y):
     Returns:
       X_train, X_val, X_test, y_train, y_val, y_test
     """
+    # First, split into 70% train and 30% temp
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y
     )
+    
+    # Then split temp into equal validation and test sets (each 15% of original)
     X_val, X_test, y_val, y_test = train_test_split(
         X_temp, y_temp, test_size=0.50, random_state=RANDOM_STATE, stratify=y_temp
     )
+    
+    # Print sizes to confirm split
+    print(f"Training set size: {len(X_train)} ({len(X_train)/len(X)*100:.1f}%)")
+    print(f"Validation set size: {len(X_val)} ({len(X_val)/len(X)*100:.1f}%)")
+    print(f"Test set size: {len(X_test)} ({len(X_test)/len(X)*100:.1f}%)")
+    
     return X_train, X_val, X_test, y_train, y_val, y_test
 
-def tune_decision_tree(X_train, y_train):
+def tune_decision_tree(X_train, y_train, X_val, y_val):
     """
     Tunes hyperparameters for a DecisionTreeClassifier using GridSearchCV.
     Returns:
@@ -69,9 +78,15 @@ def tune_decision_tree(X_train, y_train):
     print("Best Decision Tree Parameters:")
     print(grid_dt.best_params_)
     print("Best CV Score: {:.2f}%".format(grid_dt.best_score_ * 100))
-    return grid_dt.best_estimator_
+    
+    # Evaluate on validation set
+    best_dt = grid_dt.best_estimator_
+    val_accuracy = accuracy_score(y_val, best_dt.predict(X_val)) * 100
+    print(f"Validation Accuracy with Tuned Decision Tree: {val_accuracy:.2f}%")
+    
+    return best_dt
 
-def tune_adaboost(X_train, y_train):
+def tune_adaboost(X_train, y_train, X_val, y_val):
     """
     Tunes hyperparameters for an AdaBoostClassifier (with a decision tree base estimator) using GridSearchCV.
     Returns:
@@ -95,7 +110,13 @@ def tune_adaboost(X_train, y_train):
     print("Best AdaBoost Parameters:")
     print(grid_ada.best_params_)
     print("Best CV Score: {:.2f}%".format(grid_ada.best_score_ * 100))
-    return grid_ada.best_estimator_
+    
+    # Evaluate on validation set
+    best_ada = grid_ada.best_estimator_
+    val_accuracy = accuracy_score(y_val, best_ada.predict(X_val)) * 100
+    print(f"Validation Accuracy with Tuned AdaBoost: {val_accuracy:.2f}%")
+    
+    return best_ada
 
 def evaluate_model(model, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Model"):
     """
@@ -134,20 +155,38 @@ def plot_performance(performance_list):
     data = np.array(data)  # shape: (num_models, num_metrics)
     
     x = np.arange(len(metrics))
-    width = 0.35  # width of each bar
+    width = 0.35 if len(models) <= 2 else 0.25  # adjust width based on number of models
     
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(10, 6))
     
     for i, model_data in enumerate(data):
-        ax.bar(x + i * width, model_data, width, label=models[i])
+        offset = width * (i - (len(models) - 1) / 2)
+        bars = ax.bar(x + offset, model_data, width, label=models[i])
+        
+        # Add value labels on top of bars
+        for bar in bars:
+            height = bar.get_height()
+            ax.annotate(f'{height:.1f}%',
+                        xy=(bar.get_x() + bar.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom')
     
     ax.set_ylabel("Accuracy (%)")
     ax.set_title("Model Performance Comparison")
-    ax.set_xticks(x + width / 2)
+    ax.set_xticks(x)
     ax.set_xticklabels([metric.capitalize() for metric in metrics])
+    ax.set_ylim(0, 110)  # Set y-axis limit to accommodate annotations
     ax.legend()
     
     plt.tight_layout()
+    
+    # Save the plot
+    output_dir = '../model_params'
+    os.makedirs(output_dir, exist_ok=True)
+    plt.savefig(f'{output_dir}/dt_performance_comparison.png')
+    print(f"Performance comparison saved to {output_dir}/dt_performance_comparison.png")
+    
     plt.show()
 
 def main():
@@ -156,15 +195,37 @@ def main():
     X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y)
     
     # Tune and evaluate the Decision Tree model
-    best_dt = tune_decision_tree(X_train, y_train)
+    best_dt = tune_decision_tree(X_train, y_train, X_val, y_val)
     dt_performance = evaluate_model(best_dt, X_train, y_train, X_val, y_val, X_test, y_test, model_name="Decision Tree")
     
     # Tune and evaluate the AdaBoost (boosted decision tree) model
-    best_ada = tune_adaboost(X_train, y_train)
+    best_ada = tune_adaboost(X_train, y_train, X_val, y_val)
     ada_performance = evaluate_model(best_ada, X_train, y_train, X_val, y_val, X_test, y_test, model_name="AdaBoost")
     
     # Plot and display performance comparison
     plot_performance([dt_performance, ada_performance])
+    
+    # Print the final accuracies clearly
+    print("\n==== FINAL RESULTS ====")
+    print(f"Decision Tree - Train: {dt_performance['train']:.2f}%, Validation: {dt_performance['validation']:.2f}%, Test: {dt_performance['test']:.2f}%")
+    print(f"AdaBoost     - Train: {ada_performance['train']:.2f}%, Validation: {ada_performance['validation']:.2f}%, Test: {ada_performance['test']:.2f}%")
+    
+    # Save the best model
+    output_dir = '../model_params'
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Determine the better model based on validation accuracy
+    if dt_performance['validation'] > ada_performance['validation']:
+        best_model = best_dt
+        best_name = "Decision Tree"
+    else:
+        best_model = best_ada
+        best_name = "AdaBoost"
+        
+    import pickle
+    with open(f'{output_dir}/best_dt_model.pkl', 'wb') as f:
+        pickle.dump(best_model, f)
+    print(f"\nBest model ({best_name}) saved to {output_dir}/best_dt_model.pkl")
 
 if __name__ == '__main__':
     main()
